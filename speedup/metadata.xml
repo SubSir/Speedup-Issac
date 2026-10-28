@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+    <name>Speedup - Game Speed Control</name>
+    <directory>speedup</directory>
+    <description>Make the whole game run faster: you, enemies, tears, projectiles and timers all speed up together, so the game plays exactly the same, just shorter. Pure Lua, no external tools needed.
+
+[b]Speed rules[/b]
+- Cleared room (exploring, shops, treasure rooms): x1.30 by default
+- Boss fight (boss, miniboss, Boss Rush): x1.20 by default
+- Combat (everything else): x1.20 by default
+
+[b]How to adjust[/b]
+- Press [b]\[/b] in game to open the Speedup panel: Up/Down select, Left/Right adjust (hold to keep changing; step 0.05, range x1.00 ~ x3.00), Esc or [b]\[/b] to close. Shooting is paused while it is open; you can still walk.
+- Quick keys: [b]][/b] / [b][[/b] speed up / slow down the rule active right now.
+- Also available in [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787]Mod Config Menu Pure[/url] if installed (optional).
+- Faster music / sound effects can be turned on in the panel (off by default; faster audio also means higher pitch).
+- Settings are saved.
+
+Note: the in-game clock counts game time, so Boss Rush / Hush time limits still apply, just in sped-up time. Room transitions are not sped up.</description>
+    <version>1.2</version>
+    <visibility>Public</visibility>
+    <tag id="Lua"/>
+    <tag id="Tweaks"/>
+</metadata>
