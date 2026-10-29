@@ -12,7 +12,10 @@ Copy the `speedup` folder into the game's `mods` folder (or subscribe on the Ste
 
 ![Speedup panel](screenshot.png)
 
+![A learned room's speed shown on entry](screenshot-learned-room.png)
+
 - `\` opens the panel: Up/Down select, Left/Right adjust (hold to repeat), Esc to close.
 - `[` / `]` adjust the speed of the current situation.
 - Separate speeds for cleared rooms, boss fights and combat; optional faster music / sound effects.
+- Optional Learn per room: each room layout remembers its own speed across runs (+0.05 for a no-hit clear, -0.10 when hit).
 - Also shows up in Mod Config Menu Pure if it is installed.
