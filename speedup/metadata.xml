@@ -2,7 +2,8 @@
 <metadata>
     <name>Speedup - Game Speed Control</name>
     <directory>speedup</directory>
-    <description>Make the whole game run faster: you, enemies, tears, projectiles and timers all speed up together, so the game plays exactly the same, just shorter. Pure Lua, no external tools needed.
+    <id>3829199012</id>
+    <description>Make the whole game run faster: you, enemies, tears, projectiles and timers all speed up together, so the game plays exactly the same, just shorter. Pure Lua, no external tools needed. Requires Repentance or Repentance+ (not Afterbirth+).
 
 [b]Speed rules[/b]
 - Cleared room (exploring, shops, treasure rooms): x1.30 by default
@@ -17,7 +18,7 @@
 - Settings are saved.
 
 Note: the in-game clock counts game time, so Boss Rush / Hush time limits still apply, just in sped-up time. Room transitions are not sped up.</description>
-    <version>1.2</version>
+    <version>1.3</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Tweaks"/>

@@ -10,6 +10,8 @@ Copy the `speedup` folder into the game's `mods` folder (or subscribe on the Ste
 
 ## Use
 
+![Speedup panel](screenshot.png)
+
 - `\` opens the panel: Up/Down select, Left/Right adjust (hold to repeat), Esc to close.
 - `[` / `]` adjust the speed of the current situation.
 - Separate speeds for cleared rooms, boss fights and combat; optional faster music / sound effects.

@@ -127,7 +127,7 @@ local open, sel = false, 1
 local toast, toastUntil = nil, 0
 
 local function drawPanel()
-    local W, ROW = 240, 16
+    local W, ROW = 256, 16
     local H = 34 + #settings * ROW + 22
     local x = math.floor((Isaac.GetScreenWidth() - W) / 2)
     local y = math.floor((Isaac.GetScreenHeight() - H) / 2)
