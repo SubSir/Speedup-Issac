@@ -56,7 +56,7 @@ local function current()
 end
 
 local acc, inside = 0, false
-local owed, lastEngineFrame = 0, -100 -- player updates owed; drawn frame of the last engine tick
+local owed = 0 -- player updates owed by extra ticks
 -- Sound ids with no samples; IsPlaying on them spams "[warn] Sound N has no samples" into log.txt every frame.
 local EMPTY_SOUNDS = { [837] = true, [846] = true }
 local playing = {}
@@ -77,7 +77,6 @@ end
 mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, function()
     if inside then return end -- Game:Update fires POST_UPDATE again
     while owed > 0 do payPlayers() end -- not paid on a drawn frame (shouldn't happen, but never lose speed)
-    lastEngineFrame = Isaac.GetFrameCount()
     local pct = cfg[current().key]
     acc = acc + pct - 100
     inside = true
@@ -101,12 +100,11 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, func
     end
 end)
 
--- Pay the owed player updates right after the engine tick's frame is drawn, so they show on the next
--- frame alongside the engine's own in-between player update: at x2 every drawn frame moves 2 updates.
+-- Pay the owed player updates on the first render after the tick (the tick is already drawn by then), so
+-- they show on the next frame alongside the engine's own in-between player update: at x2 every drawn
+-- frame moves 2 player updates instead of 3 and 1.
 mod:AddPriorityCallback(ModCallbacks.MC_POST_RENDER, CallbackPriority.LATE, function()
-    if Isaac.GetFrameCount() == lastEngineFrame then
-        while owed > 0 do payPlayers() end
-    end
+    while owed > 0 do payPlayers() end
 end)
 
 -- UI ------------------------------------------------------------------------
