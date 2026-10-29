@@ -19,8 +19,8 @@
 
 Note: the in-game clock counts game time, so Boss Rush / Hush time limits still apply, just in sped-up time. Room transitions are not sped up.
 
-Tip: turn off [b]Active Cam[/b] in Options. With it on, the camera wobbles back and forth in big rooms while sped up.</description>
-    <version>1.5</version>
+[b]Active Cam[/b] makes the camera wobble in big rooms while sped up, so the mod turns it off once, on your first run with it (with a message). You can turn it back on in Options and it stays on.</description>
+    <version>1.6</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Tweaks"/>

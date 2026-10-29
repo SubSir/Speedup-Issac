@@ -27,6 +27,7 @@ local settings = {
 
 local cfg = {}
 for _, s in ipairs(settings) do cfg[s.key] = s.default end
+cfg.camChecked = false -- Active Cam is switched off once, on the first run with this mod
 
 if mod:HasData() then
     local ok, d = pcall(json.decode, mod:LoadData())
@@ -146,6 +147,19 @@ end
 
 local open, sel = false, 1
 local toast, toastUntil = nil, 0
+local notice, noticeUntil = nil, 0
+
+-- Active Cam interpolates the camera from the last two updates, which extra ticks throw off, so it
+-- wobbles in big rooms. Turn it off once and say so; if the player turns it back on, leave it be.
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function()
+    if cfg.camChecked then return end
+    if Options.CameraStyle == 1 then
+        Options.CameraStyle = 2
+        notice = { "Speedup turned off Active Cam: it wobbles when sped up.", "You can turn it back on in Options." }
+        noticeUntil = Isaac.GetTime() + 8000
+    end
+    set("camChecked", true)
+end)
 
 local function drawPanel()
     local W, ROW = 256, 16
@@ -190,6 +204,16 @@ local function drawToast(s)
     text(s.name, x + 10, y + 4, TEXT)
     textRight(label(cfg[s.key]), x + W - 8, y + 4, HOT)
     bar(x + 10, y + 19, W - 18, cfg[s.key])
+end
+
+local function drawNotice(lines)
+    local W, H = 0, 12 + #lines * 12
+    for _, l in ipairs(lines) do W = math.max(W, font:GetStringWidth(l) + 20) end
+    local x = math.floor((Isaac.GetScreenWidth() - W) / 2)
+    local y = 46
+    rect(x, y, W, H, BG)
+    rect(x, y, 2, H, ACCENT)
+    for i, l in ipairs(lines) do text(l, x + 10, y + 5 + (i - 1) * 12, i == 1 and TEXT or DIM) end
 end
 
 local function pressed(key)
@@ -244,6 +268,7 @@ mod:AddCallback(ModCallbacks.MC_POST_RENDER, function()
         toastUntil = Isaac.GetTime() + 1500
     end
     if toast and Isaac.GetTime() < toastUntil then drawToast(toast) end
+    if notice and Isaac.GetTime() < noticeUntil then drawNotice(notice) end
 end)
 
 -- Arrow keys shoot by default, so stop shooting while the panel is open (you can still walk).
