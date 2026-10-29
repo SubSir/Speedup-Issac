@@ -191,7 +191,12 @@ end
 
 local open, sel = false, 1
 local toast, toastUntil = nil, 0
-local notice, noticeUntil = nil, 0
+local notice, noticeFor, noticeFrame, noticeUntil = nil, 0, 0, nil
+
+-- The countdown only starts once gameplay runs, so a boss intro or pause doesn't eat the message.
+local function showNotice(lines, ms)
+    notice, noticeFor, noticeFrame, noticeUntil = lines, ms, game:GetFrameCount(), nil
+end
 
 -- Active Cam interpolates the camera from the last two updates, which extra ticks throw off, so it
 -- wobbles in big rooms. Turn it off once and say so; if the player turns it back on, leave it be.
@@ -199,8 +204,7 @@ mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function()
     if cfg.camChecked then return end
     if Options.CameraStyle == 1 then
         Options.CameraStyle = 2
-        notice = { "Speedup turned off Active Cam: it wobbles when sped up.", "You can turn it back on in Options." }
-        noticeUntil = Isaac.GetTime() + 8000
+        showNotice({ "Speedup turned off Active Cam: it wobbles when sped up.", "You can turn it back on in Options." }, 8000)
     end
     set("camChecked", true)
 end)
@@ -214,6 +218,10 @@ local hit = false
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function()
     hit = false
     checkTraps()
+    local off = roomOffset()
+    if off ~= 0 then -- a learned room plays at its own speed, so say so
+        showNotice({ ("This room: %s (%+.2f learned)"):format(label(speedNow()), off / 100) }, 2000)
+    end
 end)
 
 mod:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, _, _, flags)
@@ -227,8 +235,7 @@ mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, function()
     local new = math.max(-LEARN_LIMIT, math.min(LEARN_LIMIT, old + (hit and -LEARN_DOWN or LEARN_UP)))
     cfg.rooms[key] = new ~= 0 and new or nil
     set("rooms", cfg.rooms)
-    notice = { ("This room: %+.2f (%s)"):format(new / 100, hit and "got hit" or "no hit") }
-    noticeUntil = Isaac.GetTime() + 2500
+    showNotice({ ("This room: %+.2f (%s)"):format(new / 100, hit and "got hit" or "no hit") }, 2500)
 end)
 
 local function drawPanel()
@@ -339,7 +346,8 @@ mod:AddCallback(ModCallbacks.MC_POST_RENDER, function()
         toastUntil = Isaac.GetTime() + 1500
     end
     if toast and Isaac.GetTime() < toastUntil then drawToast(toast) end
-    if notice and Isaac.GetTime() < noticeUntil then drawNotice(notice) end
+    if notice and not noticeUntil and game:GetFrameCount() > noticeFrame then noticeUntil = Isaac.GetTime() + noticeFor end
+    if noticeUntil and Isaac.GetTime() < noticeUntil then drawNotice(notice) end
 end)
 
 -- Arrow keys shoot by default, so stop shooting while the panel is open (you can still walk).
