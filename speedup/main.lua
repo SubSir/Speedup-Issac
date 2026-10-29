@@ -56,22 +56,35 @@ local function current()
 end
 
 local acc, inside = 0, false
+local owed, lastEngineFrame = 0, -100 -- player updates owed; drawn frame of the last engine tick
 -- Sound ids with no samples; IsPlaying on them spams "[warn] Sound N has no samples" into log.txt every frame.
 local EMPTY_SOUNDS = { [837] = true, [846] = true }
 local playing = {}
 
+-- Players update twice per game tick (once inside it, once more on the drawn frame in between), but
+-- Game:Update only covers the first, so every extra tick owes each player one more update.
+local function payPlayers()
+    inside = true
+    for i = 0, game:GetNumPlayers() - 1 do Isaac.GetPlayer(i):Update() end
+    inside = false
+    owed = owed - 1
+end
+
 -- Each real 1/30s frame, run (speed - 1) extra full game ticks, so everything keeps its relative timing.
 -- LATE so every other mod finishes its POST_UPDATE for this tick before the next one starts.
--- Don't move this to MC_POST_RENDER to spread ticks over drawn frames: Game:Update there blanks whole frames.
+-- Don't move Game:Update to MC_POST_RENDER to spread ticks over drawn frames: there it blanks whole frames.
 -- ponytail: whole ticks per 1/30s, so x2/x3 move evenly and in-between speeds alternate (x1.5 = 1,2,1,2 ticks)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, function()
     if inside then return end -- Game:Update fires POST_UPDATE again
+    while owed > 0 do payPlayers() end -- not paid on a drawn frame (shouldn't happen, but never lose speed)
+    lastEngineFrame = Isaac.GetFrameCount()
     local pct = cfg[current().key]
     acc = acc + pct - 100
     inside = true
     while acc >= 100 do
         acc = acc - 100
         game:Update()
+        owed = owed + 1
     end
     inside = false
 
@@ -85,6 +98,14 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, func
             if on and not playing[id] then sfx:AdjustPitch(id, pitch) end
             playing[id] = on
         end
+    end
+end)
+
+-- Pay the owed player updates right after the engine tick's frame is drawn, so they show on the next
+-- frame alongside the engine's own in-between player update: at x2 every drawn frame moves 2 updates.
+mod:AddPriorityCallback(ModCallbacks.MC_POST_RENDER, CallbackPriority.LATE, function()
+    if Isaac.GetFrameCount() == lastEngineFrame then
+        while owed > 0 do payPlayers() end
     end
 end)
 
