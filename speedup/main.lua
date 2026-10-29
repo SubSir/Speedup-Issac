@@ -6,19 +6,45 @@ local json = require("json")
 
 local MIN, MAX, STEP = 100, 300, 5
 
+-- Boss rooms, plus any room with a boss alive in it (boss challenge rooms, Greed in a shop, angels...).
 local function isBoss(room)
     local t = room:GetType()
     return t == RoomType.ROOM_BOSS or t == RoomType.ROOM_MINIBOSS or t == RoomType.ROOM_BOSSRUSH
+        or room:GetAliveBossesCount() > 0
+end
+
+-- Traps never die, so a room with them counts as cleared while they still move, shoot or stab.
+local TRAPS = {
+    EntityType.ENTITY_POKY, EntityType.ENTITY_WALL_HUGGER, EntityType.ENTITY_SPIKEBALL, EntityType.ENTITY_GRUDGE,
+    EntityType.ENTITY_BALL_AND_CHAIN, EntityType.ENTITY_MOCKULUS, EntityType.ENTITY_STONEHEAD,
+    EntityType.ENTITY_STONE_EYE, EntityType.ENTITY_CONSTANT_STONE_SHOOTER, EntityType.ENTITY_BRIMSTONE_HEAD,
+    EntityType.ENTITY_GAPING_MAW, EntityType.ENTITY_BROKEN_GAPING_MAW, EntityType.ENTITY_QUAKE_GRIMACE,
+    EntityType.ENTITY_BOMB_GRIMACE,
+}
+local trapRoom = false
+
+local function checkTraps()
+    for _, t in ipairs(TRAPS) do
+        if #Isaac.FindByType(t) > 0 then trapRoom = true return end
+    end
+    local room = game:GetRoom()
+    for i = 0, room:GetGridSize() - 1 do
+        local g = room:GetGridEntity(i)
+        if g and g:GetType() == GridEntityType.GRID_SPIKES_ONOFF then trapRoom = true return end
+    end
+    trapRoom = false
 end
 
 -- Speed settings (percent: 100 = vanilla) are rules: the first whose test matches the current room applies.
 local settings = {
-    { key = "clear", name = "Cleared room", default = 130, test = function(room) return room:IsClear() end,
-      info = "Rooms with no enemies left: exploring, shops, treasure rooms." },
+    { key = "clear", name = "Cleared room", default = 130, test = function(room) return room:IsClear() and not trapRoom end,
+      info = "Rooms with no enemies or traps left: exploring, shops, treasure rooms. Trap rooms use Combat." },
     { key = "boss", name = "Boss fight", default = 120, test = isBoss,
-      info = "Boss, miniboss and Boss Rush rooms until cleared." },
+      info = "Boss, miniboss and Boss Rush rooms until cleared, and any room while a boss is alive." },
     { key = "combat", name = "Combat", default = 120, test = function() return true end,
       info = "Every other room with enemies." },
+    { key = "adapt", name = "Learn per room", default = false,
+      info = "Each room layout remembers its own speed: +0.05 when you clear it without getting hit, -0.10 when you get hit." },
     { key = "music", name = "Faster music", default = false,
       info = "Music plays faster (and higher pitched) to match game speed." },
     { key = "sfx", name = "Faster sounds", default = false,
@@ -28,6 +54,7 @@ local settings = {
 local cfg = {}
 for _, s in ipairs(settings) do cfg[s.key] = s.default end
 cfg.camChecked = false -- Active Cam is switched off once, on the first run with this mod
+cfg.rooms = {} -- "Learn per room": speed offset (percent) per room layout, kept across runs
 
 if mod:HasData() then
     local ok, d = pcall(json.decode, mod:LoadData())
@@ -56,6 +83,22 @@ local function current()
     end
 end
 
+-- A room layout is the same across runs: floor type + room type + layout variant.
+local function roomKey()
+    local d = game:GetLevel():GetCurrentRoomDesc().Data
+    return d and ("%d.%d.%d"):format(d.StageID, d.Type, d.Variant)
+end
+
+-- Learned offset for this room; cleared rooms just use their own speed.
+local function roomOffset()
+    if not cfg.adapt or current().key == "clear" then return 0 end
+    return cfg.rooms[roomKey() or ""] or 0
+end
+
+local function speedNow()
+    return math.max(MIN, math.min(MAX, cfg[current().key] + roomOffset()))
+end
+
 local acc, inside = 0, false
 local owed = 0 -- player updates owed by extra ticks
 -- Sound ids with no samples; IsPlaying on them spams "[warn] Sound N has no samples" into log.txt every frame.
@@ -77,8 +120,9 @@ end
 -- ponytail: whole ticks per 1/30s, so x2/x3 move evenly and in-between speeds alternate (x1.5 = 1,2,1,2 ticks)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, function()
     if inside then return end -- Game:Update fires POST_UPDATE again
+    if game:GetFrameCount() % 15 == 0 then checkTraps() end -- traps can be spawned or destroyed mid-room
     while owed > 0 do payPlayers() end -- not paid on a drawn frame (shouldn't happen, but never lose speed)
-    local pct = cfg[current().key]
+    local pct = speedNow()
     acc = acc + pct - 100
     inside = true
     while acc >= 100 do
@@ -161,6 +205,32 @@ mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function()
     set("camChecked", true)
 end)
 
+-- Learn per room: a hit in the room slows its layout down, a clean clear speeds it up.
+local LEARN_UP, LEARN_DOWN, LEARN_LIMIT = 5, 10, 100
+local IGNORED_DAMAGE = DamageFlag.DAMAGE_FAKE | DamageFlag.DAMAGE_RED_HEARTS | DamageFlag.DAMAGE_IV_BAG
+    | DamageFlag.DAMAGE_NO_PENALTIES | DamageFlag.DAMAGE_CURSED_DOOR -- self-inflicted or harmless
+local hit = false
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function()
+    hit = false
+    checkTraps()
+end)
+
+mod:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, _, _, flags)
+    if flags & IGNORED_DAMAGE == 0 then hit = true end
+end, EntityType.ENTITY_PLAYER)
+
+mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, function()
+    local key = roomKey()
+    if not cfg.adapt or not key then return end
+    local old = cfg.rooms[key] or 0
+    local new = math.max(-LEARN_LIMIT, math.min(LEARN_LIMIT, old + (hit and -LEARN_DOWN or LEARN_UP)))
+    cfg.rooms[key] = new ~= 0 and new or nil
+    set("rooms", cfg.rooms)
+    notice = { ("This room: %+.2f (%s)"):format(new / 100, hit and "got hit" or "no hit") }
+    noticeUntil = Isaac.GetTime() + 2500
+end)
+
 local function drawPanel()
     local W, ROW = 256, 16
     local H = 34 + #settings * ROW + 22
@@ -171,7 +241,8 @@ local function drawPanel()
     rect(x, y, W, H, BG)
     rect(x, y, W, 2, ACCENT)
     text("SPEEDUP", x + 10, y + 8, HOT)
-    textRight("now: " .. now.name, x + W - 10, y + 8, DIM)
+    local off = roomOffset()
+    textRight("now: " .. now.name .. (off ~= 0 and (" %+.2f"):format(off / 100) or ""), x + W - 10, y + 8, DIM)
     rect(x + 10, y + 24, W - 20, 1, TRACK)
 
     for i, s in ipairs(settings) do

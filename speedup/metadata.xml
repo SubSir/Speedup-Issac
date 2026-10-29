@@ -6,9 +6,10 @@
     <description>Make the whole game run faster: you, enemies, tears, projectiles and timers all speed up together, so the game plays exactly the same, just shorter. Pure Lua, no external tools needed. Requires Repentance or Repentance+ (not Afterbirth+).
 
 [b]Speed rules[/b]
-- Cleared room (exploring, shops, treasure rooms): x1.30 by default
-- Boss fight (boss, miniboss, Boss Rush): x1.20 by default
+- Cleared room (exploring, shops, treasure rooms): x1.30 by default. Rooms that still have traps (spike blocks, stone shooters, on/off spikes...) use the Combat speed instead.
+- Boss fight (boss, miniboss, Boss Rush, and any room while a boss is alive, like boss challenge rooms): x1.20 by default
 - Combat (everything else): x1.20 by default
+- Optional [b]Learn per room[/b] (off by default): every room layout remembers its own speed across runs, +0.05 each time you clear it without getting hit, -0.10 when you get hit.
 
 [b]How to adjust[/b]
 - Press [b][noparse]\[/noparse][/b] in game to open the Speedup panel: Up/Down select, Left/Right adjust (hold to keep changing; step 0.05, range x1.00 ~ x3.00), Esc or [b][noparse]\[/noparse][/b] to close. Shooting is paused while it is open; you can still walk.
@@ -20,7 +21,7 @@
 Note: the in-game clock counts game time, so Boss Rush / Hush time limits still apply, just in sped-up time. Room transitions are not sped up.
 
 [b]Active Cam[/b] makes the camera wobble in big rooms while sped up, so the mod turns it off once, on your first run with it (with a message). You can turn it back on in Options and it stays on.</description>
-    <version>1.6</version>
+    <version>1.7</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Tweaks"/>
