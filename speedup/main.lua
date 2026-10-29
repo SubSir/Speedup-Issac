@@ -62,6 +62,8 @@ local playing = {}
 
 -- Each real 1/30s frame, run (speed - 1) extra full game ticks, so everything keeps its relative timing.
 -- LATE so every other mod finishes its POST_UPDATE for this tick before the next one starts.
+-- Don't move this to MC_POST_RENDER to spread ticks over drawn frames: Game:Update there blanks whole frames.
+-- ponytail: whole ticks per 1/30s, so x2/x3 move evenly and in-between speeds alternate (x1.5 = 1,2,1,2 ticks)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, function()
     if inside then return end -- Game:Update fires POST_UPDATE again
     local pct = cfg[current().key]
