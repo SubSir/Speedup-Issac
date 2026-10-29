@@ -21,28 +21,54 @@ local TRAPS = {
     EntityType.ENTITY_GAPING_MAW, EntityType.ENTITY_BROKEN_GAPING_MAW, EntityType.ENTITY_QUAKE_GRIMACE,
     EntityType.ENTITY_BOMB_GRIMACE,
 }
-local trapRoom = false
+-- Red (1) and purple (3) fireplaces shoot at you; only while lit. An unlit one stays as a 1 HP stub.
+local SHOOTING_FIRES = { 1, 3 }
+-- Troll bombs (the smiley ones) go off on their own, so they need dodging too.
+local TROLL_BOMBS = { BombVariant.BOMB_TROLL, BombVariant.BOMB_SUPERTROLL, BombVariant.BOMB_GOLDENTROLL }
+local trapRoom, gridTraps = false, false
 
-local function checkTraps()
-    for _, t in ipairs(TRAPS) do
-        if #Isaac.FindByType(t) > 0 then trapRoom = true return end
-    end
+-- On/off spikes are part of the room layout, so the grid only needs scanning on entry.
+local function checkGridTraps()
     local room = game:GetRoom()
     for i = 0, room:GetGridSize() - 1 do
         local g = room:GetGridEntity(i)
-        if g and g:GetType() == GridEntityType.GRID_SPIKES_ONOFF then trapRoom = true return end
+        if g and g:GetType() == GridEntityType.GRID_SPIKES_ONOFF then gridTraps = true return end
     end
-    trapRoom = false
+    gridTraps = false
+end
+
+local function hasTrapEntity()
+    for _, t in ipairs(TRAPS) do
+        if #Isaac.FindByType(t) > 0 then return true end
+    end
+    for _, v in ipairs(TROLL_BOMBS) do
+        if #Isaac.FindByType(EntityType.ENTITY_BOMB, v) > 0 then return true end
+    end
+    for _, v in ipairs(SHOOTING_FIRES) do
+        for _, e in ipairs(Isaac.FindByType(EntityType.ENTITY_FIREPLACE, v)) do
+            if e.HitPoints > 1 then return true end
+        end
+    end
+    return false
+end
+
+local function checkTraps()
+    trapRoom = gridTraps or hasTrapEntity()
 end
 
 -- Speed settings (percent: 100 = vanilla) are rules: the first whose test matches the current room applies.
 local settings = {
-    { key = "clear", name = "Cleared room", default = 130, test = function(room) return room:IsClear() and not trapRoom end,
-      info = "Rooms with no enemies or traps left: exploring, shops, treasure rooms. Trap rooms use Combat." },
+    { key = "clear", name = "Cleared room", default = 130, test = function(room)
+        -- IsClear stays true once cleared, even if spiders pop out of a pot later, so check for enemies too
+        return room:IsClear() and not trapRoom and room:GetAliveEnemiesCount() == 0
+    end,
+      info = "Rooms with no enemies or traps left: exploring, shops, treasure rooms. Trap rooms, and enemies showing up later (spiders from a pot), use Combat." },
     { key = "boss", name = "Boss fight", default = 120, test = isBoss,
       info = "Boss, miniboss and Boss Rush rooms until cleared, and any room while a boss is alive." },
     { key = "combat", name = "Combat", default = 120, test = function() return true end,
       info = "Every other room with enemies." },
+    { key = "clock", name = "Real time clock", default = true,
+      info = "Shows the real time played this run next to the minimap, so you can see how long a sped-up run really took." },
     { key = "adapt", name = "Learn per room", default = false,
       info = "Each room layout remembers its own speed: +0.05 when you clear it without getting hit, -0.10 when you get hit." },
     { key = "music", name = "Faster music", default = false,
@@ -55,6 +81,7 @@ local cfg = {}
 for _, s in ipairs(settings) do cfg[s.key] = s.default end
 cfg.camChecked = false -- Active Cam is switched off once, on the first run with this mod
 cfg.rooms = {} -- "Learn per room": speed offset (percent) per room layout, kept across runs
+cfg.run = { seed = 0, ms = 0 } -- real time played in the current run, so it survives exit and continue
 
 if mod:HasData() then
     local ok, d = pcall(json.decode, mod:LoadData())
@@ -100,6 +127,7 @@ local function speedNow()
 end
 
 local acc, inside = 0, false
+local lastTick -- Isaac.GetTime() of the last engine tick, for the real time clock
 local owed = 0 -- player updates owed by extra ticks
 -- Sound ids with no samples; IsPlaying on them spams "[warn] Sound N has no samples" into log.txt every frame.
 local EMPTY_SOUNDS = { [837] = true, [846] = true }
@@ -120,7 +148,11 @@ end
 -- ponytail: whole ticks per 1/30s, so x2/x3 move evenly and in-between speeds alternate (x1.5 = 1,2,1,2 ticks)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, function()
     if inside then return end -- Game:Update fires POST_UPDATE again
-    if game:GetFrameCount() % 15 == 0 then checkTraps() end -- traps can be spawned or destroyed mid-room
+    -- Real time only counts while the engine ticks, so pauses and boss intros are left out like the game's timer.
+    local now = Isaac.GetTime()
+    if lastTick and now - lastTick < 250 then cfg.run.ms = cfg.run.ms + now - lastTick end
+    lastTick = now
+    if game:GetFrameCount() % 5 == 0 then checkTraps() end -- traps (troll bombs!) come and go mid-room
     while owed > 0 do payPlayers() end -- not paid on a drawn frame (shouldn't happen, but never lose speed)
     local pct = speedNow()
     acc = acc + pct - 100
@@ -215,12 +247,22 @@ local IGNORED_DAMAGE = DamageFlag.DAMAGE_FAKE | DamageFlag.DAMAGE_RED_HEARTS | D
     | DamageFlag.DAMAGE_NO_PENALTIES | DamageFlag.DAMAGE_CURSED_DOOR -- self-inflicted or harmless
 local hit = false
 
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, continued)
+    local seed = game:GetSeeds():GetStartSeed()
+    if not (continued and cfg.run.seed == seed) then set("run", { seed = seed, ms = 0 }) end
+    lastTick = nil
+end)
+
+mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function() set("run", cfg.run) end)
+
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function()
+    set("run", cfg.run) -- save the clock now and then, in case the game closes without exiting the run
     hit = false
+    checkGridTraps()
     checkTraps()
     local off = roomOffset()
     if off ~= 0 then -- a learned room plays at its own speed, so say so
-        showNotice({ ("This room: %s (%+.2f learned)"):format(label(speedNow()), off / 100) }, 2000)
+        showNotice({ ("This room: %s (%+.2f learned)"):format(label(speedNow()), off / 100) }, 4000)
     end
 end)
 
@@ -316,9 +358,20 @@ end
 
 local swallowEsc = false
 
+-- Just left of the minimap, level with the game's own Time (under the minimap is where curse icons go).
+-- Faint like the game's Time, so it's there when you look for it but doesn't draw the eye.
+-- ponytail: fixed spot for the default HUD; ignores the HUD offset option
+local CLOCK_COLOR = KColor(0.9, 0.88, 0.85, 0.4)
+local function drawClock()
+    local t = math.floor(cfg.run.ms / 1000)
+    local str = ("Real %02d:%02d:%02d"):format(t // 3600, t // 60 % 60, t % 60)
+    textRight(str, Isaac.GetScreenWidth() - 86, 33, CLOCK_COLOR)
+end
+
 mod:AddCallback(ModCallbacks.MC_POST_RENDER, function()
     if swallowEsc and not Input.IsButtonPressed(Keyboard.KEY_ESCAPE, 0) then swallowEsc = false end
     if game:IsPaused() or (ModConfigMenu and ModConfigMenu.IsVisible) then return end
+    if cfg.clock and game:GetHUD():IsVisible() then drawClock() end
     if pressed(Keyboard.KEY_BACKSLASH) then open = not open end
     if open and pressed(Keyboard.KEY_ESCAPE) then
         open, swallowEsc = false, true

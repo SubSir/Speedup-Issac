@@ -6,7 +6,7 @@
     <description>Make the whole game run faster: you, enemies, tears, projectiles and timers all speed up together, so the game plays exactly the same, just shorter. Pure Lua, no external tools needed. Requires Repentance or Repentance+ (not Afterbirth+).
 
 [b]Speed rules[/b]
-- Cleared room (exploring, shops, treasure rooms): x1.30 by default. Rooms that still have traps (spike blocks, stone shooters, on/off spikes...) use the Combat speed instead.
+- Cleared room (exploring, shops, treasure rooms): x1.30 by default. Rooms that still have traps (spike blocks, stone shooters, red or purple fires, troll bombs, on/off spikes...) or new enemies (spiders from a pot...) use the Combat speed instead.
 - Boss fight (boss, miniboss, Boss Rush, and any room while a boss is alive, like boss challenge rooms): x1.20 by default
 - Combat (everything else): x1.20 by default
 - Optional [b]Learn per room[/b] (off by default): every room layout remembers its own speed across runs, +0.05 each time you clear it without getting hit, -0.10 when you get hit.
@@ -16,6 +16,7 @@
 - Quick keys: [b][noparse]][/noparse][/b] / [b][noparse][[/noparse][/b] speed up / slow down the rule active right now.
 - Also available in [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787]Mod Config Menu Pure[/url] if installed (optional).
 - Faster music / sound effects can be turned on in the panel (off by default; faster audio also means higher pitch).
+- A [b]Real time clock[/b] next to the minimap shows how long the run really took (pauses excluded, kept when you exit and continue). Can be turned off in the panel.
 - Settings are saved.
 
 Note: the in-game clock counts game time, so Boss Rush / Hush time limits still apply, just in sped-up time. Room transitions are not sped up.
