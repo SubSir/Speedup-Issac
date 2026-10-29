@@ -11,8 +11,8 @@
 - Combat (everything else): x1.20 by default
 
 [b]How to adjust[/b]
-- Press [b]\[/b] in game to open the Speedup panel: Up/Down select, Left/Right adjust (hold to keep changing; step 0.05, range x1.00 ~ x3.00), Esc or [b]\[/b] to close. Shooting is paused while it is open; you can still walk.
-- Quick keys: [b]][/b] / [b][[/b] speed up / slow down the rule active right now.
+- Press [b][noparse]\[/noparse][/b] in game to open the Speedup panel: Up/Down select, Left/Right adjust (hold to keep changing; step 0.05, range x1.00 ~ x3.00), Esc or [b][noparse]\[/noparse][/b] to close. Shooting is paused while it is open; you can still walk.
+- Quick keys: [b][noparse]][/noparse][/b] / [b][noparse][[/noparse][/b] speed up / slow down the rule active right now.
 - Also available in [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787]Mod Config Menu Pure[/url] if installed (optional).
 - Faster music / sound effects can be turned on in the panel (off by default; faster audio also means higher pitch).
 - Settings are saved.
