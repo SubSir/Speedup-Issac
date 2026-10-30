@@ -15,7 +15,7 @@
 - Press [b][noparse]\[/noparse][/b] in game to open the Speedup panel: Up/Down select, Left/Right adjust (hold to keep changing; step 0.05, range x1.00 ~ x3.00), Esc or [b][noparse]\[/noparse][/b] to close. Shooting is paused while it is open; you can still walk.
 - Quick keys: [b][noparse]][/noparse][/b] / [b][noparse][[/noparse][/b] speed up / slow down the rule active right now.
 - Also available in [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787]Mod Config Menu Pure[/url] if installed (optional).
-- [b]Smooth motion[/b] (on by default): at in-between speeds like x1.50 you move 2 and 1 steps on alternate frames, which looks doubled, so you are drawn halfway between. Only the drawing moves, not your hitbox. Whole speeds (x2.00, x3.00) are smooth anyway.
+- [b]Smooth motion[/b] (on by default): at in-between speeds like x1.50 things move 2 and 1 steps at a time, which looks doubled, so you, enemies, shots, tears and familiars are drawn halfway between. Only the drawing moves, not hitboxes. Whole speeds (x2.00, x3.00) are smooth anyway.
 - Faster music / sound effects can be turned on in the panel (off by default; faster audio also means higher pitch).
 - A [b]Real time clock[/b] next to the minimap shows how long the run really took (pauses excluded, kept when you exit and continue). Can be turned off in the panel.
 - Settings are saved.
@@ -23,7 +23,7 @@
 Note: the in-game clock counts game time, so Boss Rush / Hush time limits still apply, just in sped-up time. Room transitions are not sped up.
 
 [b]Active Cam[/b] makes the camera wobble in big rooms while sped up, so the mod turns it off once, on your first run with it (with a message). You can turn it back on in Options and it stays on.</description>
-    <version>1.10</version>
+    <version>1.11</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Tweaks"/>

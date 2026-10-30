@@ -68,7 +68,7 @@ local settings = {
     { key = "combat", name = "Combat", default = 120, test = function() return true end,
       info = "Every other room with enemies." },
     { key = "smooth", name = "Smooth motion", default = true,
-      info = "At in-between speeds like x1.5 you move 2 and 1 steps on alternate frames; this draws you halfway between, so you don't look doubled. Hitbox unchanged." },
+      info = "At in-between speeds like x1.5 things move 2 and 1 steps on alternate frames; this draws them halfway between, so nothing looks doubled. Hitboxes unchanged." },
     { key = "clock", name = "Real time clock", default = true,
       info = "Shows the real time played this run next to the minimap, so you can see how long a sped-up run really took." },
     { key = "adapt", name = "Learn per room", default = false,
@@ -193,23 +193,41 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_RENDER, CallbackPriority.LATE, func
     end
 end)
 
--- Smooth motion: draw each player at the midpoint of where they are now and where they were last drawn,
--- so x1.5's 2,1,2,1 updates per frame look like 1.5,1.5. Only the drawing moves; Position is untouched.
+-- Smooth motion: draw things at the midpoint of where they are now and where they were last shown, so
+-- uneven steps (players x1.5: 2,1,2,1 updates per drawn frame; everything else 1,2,1,2 per tick) look even.
+-- Only the drawing moves; Position, and so every hitbox, is untouched.
 -- The game may use PositionOffset too, so only our own share is added and taken back.
--- ponytail: no pre-render callback in vanilla, so it's set on every player update and the last one wins
-mod:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, p)
-    local d = p:GetData()
+local function smooth(e, last)
+    local d = e:GetData()
     local mine = Vector.Zero
-    if cfg.smooth and d.speedupDrawn and speedNow() % 100 ~= 0 then
-        local back = (d.speedupDrawn - p.Position) / 2
-        if back:Length() < 20 then mine = back end -- not across teleports and room changes
+    if cfg.smooth and last and speedNow() % 100 ~= 0 then
+        local back = (last - e.Position) / 2
+        if back:Length() < 40 then mine = back end -- not across teleports
     end
-    p.PositionOffset = p.PositionOffset - (d.speedupMine or Vector.Zero) + mine
+    e.PositionOffset = e.PositionOffset - (d.speedupMine or Vector.Zero) + mine
     d.speedupMine = mine
-end)
+end
 
-mod:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, p)
-    p:GetData().speedupDrawn = Vector(p.Position.X, p.Position.Y) -- a copy, not a live reference
+local function copy(v) return Vector(v.X, v.Y) end -- Position is a live reference
+
+-- Players update every drawn frame. ponytail: no pre-render callback in vanilla, so it's set on every
+-- player update and the last one before drawing wins.
+mod:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, p) smooth(p, p:GetData().speedupDrawn) end)
+mod:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, p) p:GetData().speedupDrawn = copy(p.Position) end)
+
+-- Enemies, their shots, your tears and familiars update once per tick: smooth after the tick's extra
+-- updates (after the speed callback above, hence LATE + 1).
+local SMOOTHED = { [EntityType.ENTITY_TEAR] = true, [EntityType.ENTITY_FAMILIAR] = true,
+                   [EntityType.ENTITY_PROJECTILE] = true }
+mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE + 1, function()
+    if inside then return end
+    for _, e in ipairs(Isaac.GetRoomEntities()) do
+        if SMOOTHED[e.Type] or e:ToNPC() then
+            local d = e:GetData()
+            smooth(e, d.speedupLast)
+            d.speedupLast = copy(e.Position)
+        end
+    end
 end)
 
 -- UI ------------------------------------------------------------------------
