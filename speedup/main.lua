@@ -67,6 +67,8 @@ local settings = {
       info = "Boss, miniboss and Boss Rush rooms until cleared, and any room while a boss is alive." },
     { key = "combat", name = "Combat", default = 120, test = function() return true end,
       info = "Every other room with enemies." },
+    { key = "smooth", name = "Smooth motion", default = true,
+      info = "At in-between speeds like x1.5 you move 2 and 1 steps on alternate frames; this draws you halfway between, so you don't look doubled. Hitbox unchanged." },
     { key = "clock", name = "Real time clock", default = true,
       info = "Shows the real time played this run next to the minimap, so you can see how long a sped-up run really took." },
     { key = "adapt", name = "Learn per room", default = false,
@@ -189,6 +191,25 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_RENDER, CallbackPriority.LATE, func
     if acc + speedNow() - 100 >= 100 then -- next tick runs an extra one too
         while owed > 0 do payPlayers() end
     end
+end)
+
+-- Smooth motion: draw each player at the midpoint of where they are now and where they were last drawn,
+-- so x1.5's 2,1,2,1 updates per frame look like 1.5,1.5. Only the drawing moves; Position is untouched.
+-- The game may use PositionOffset too, so only our own share is added and taken back.
+-- ponytail: no pre-render callback in vanilla, so it's set on every player update and the last one wins
+mod:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, p)
+    local d = p:GetData()
+    local mine = Vector.Zero
+    if cfg.smooth and d.speedupDrawn and speedNow() % 100 ~= 0 then
+        local back = (d.speedupDrawn - p.Position) / 2
+        if back:Length() < 20 then mine = back end -- not across teleports and room changes
+    end
+    p.PositionOffset = p.PositionOffset - (d.speedupMine or Vector.Zero) + mine
+    d.speedupMine = mine
+end)
+
+mod:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, p)
+    p:GetData().speedupDrawn = Vector(p.Position.X, p.Position.Y) -- a copy, not a live reference
 end)
 
 -- UI ------------------------------------------------------------------------

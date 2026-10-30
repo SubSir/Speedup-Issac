@@ -17,5 +17,6 @@ Copy the `speedup` folder into the game's `mods` folder (or subscribe on the Ste
 - `\` opens the panel: Up/Down select, Left/Right adjust (hold to repeat), Esc to close.
 - `[` / `]` adjust the speed of the current situation.
 - Separate speeds for cleared rooms, boss fights and combat; optional faster music / sound effects.
+- Smooth motion (on by default): at in-between speeds like x1.5 the player is drawn halfway between frames, so it doesn't look doubled. Only the drawing moves, not the hitbox.
 - Optional Learn per room: each room layout remembers its own speed across runs (+0.05 for a no-hit clear, -0.10 when hit).
 - Also shows up in Mod Config Menu Pure if it is installed.
