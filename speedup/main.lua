@@ -129,6 +129,7 @@ end
 local acc, inside = 0, false
 local lastTick -- Isaac.GetTime() of the last engine tick, for the real time clock
 local owed = 0 -- player updates owed by extra ticks
+local due = false -- the first render after a tick hasn't run yet
 -- Sound ids with no samples; IsPlaying on them spams "[warn] Sound N has no samples" into log.txt every frame.
 local EMPTY_SOUNDS = { [837] = true, [846] = true }
 local playing = {}
@@ -153,7 +154,7 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, func
     if lastTick and now - lastTick < 250 then cfg.run.ms = cfg.run.ms + now - lastTick end
     lastTick = now
     if game:GetFrameCount() % 5 == 0 then checkTraps() end -- traps (troll bombs!) come and go mid-room
-    while owed > 0 do payPlayers() end -- not paid on a drawn frame (shouldn't happen, but never lose speed)
+    while owed > 0 do payPlayers() end -- left over from the last tick, shown with this tick's frame
     local pct = speedNow()
     acc = acc + pct - 100
     inside = true
@@ -163,6 +164,7 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, func
         owed = owed + 1
     end
     inside = false
+    due = true
 
     -- Isaac can only resample audio, so faster also means higher pitch.
     local pitch = pct / 100
@@ -177,11 +179,16 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_UPDATE, CallbackPriority.LATE, func
     end
 end)
 
--- Pay the owed player updates on the first render after the tick (the tick is already drawn by then), so
--- they show on the next frame alongside the engine's own in-between player update: at x2 every drawn
--- frame moves 2 player updates instead of 3 and 1.
+-- Owed updates go either on the in-between frame (paid on the first render after the tick, which is
+-- already drawn by then) or on the next tick's frame (paid at its start). Pick whichever frame the next
+-- tick doesn't load: x2 moves 2,2 per drawn frame and x1.5 2,1,2,1, not a wobbly 2,2,1,1.
+-- ponytail: x2.5 still goes 2,2,3,3; split the owed updates if anyone plays there
 mod:AddPriorityCallback(ModCallbacks.MC_POST_RENDER, CallbackPriority.LATE, function()
-    while owed > 0 do payPlayers() end
+    if not due then return end
+    due = false
+    if acc + speedNow() - 100 >= 100 then -- next tick runs an extra one too
+        while owed > 0 do payPlayers() end
+    end
 end)
 
 -- UI ------------------------------------------------------------------------
