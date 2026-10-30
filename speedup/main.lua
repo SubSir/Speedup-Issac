@@ -58,14 +58,14 @@ end
 
 -- Speed settings (percent: 100 = vanilla) are rules: the first whose test matches the current room applies.
 local settings = {
-    { key = "clear", name = "Cleared room", default = 130, test = function(room)
+    { key = "clear", name = "Cleared room", default = 150, test = function(room)
         -- IsClear stays true once cleared, even if spiders pop out of a pot later, so check for enemies too
         return room:IsClear() and not trapRoom and room:GetAliveEnemiesCount() == 0
     end,
       info = "Rooms with no enemies or traps left: exploring, shops, treasure rooms. Trap rooms, and enemies showing up later (spiders from a pot), use Combat." },
-    { key = "boss", name = "Boss fight", default = 120, test = isBoss,
+    { key = "boss", name = "Boss fight", default = 110, test = isBoss,
       info = "Boss, miniboss and Boss Rush rooms until cleared, and any room while a boss is alive." },
-    { key = "combat", name = "Combat", default = 120, test = function() return true end,
+    { key = "combat", name = "Combat", default = 110, test = function() return true end,
       info = "Every other room with enemies." },
     { key = "smooth", name = "Smooth motion", default = true,
       info = "At in-between speeds like x1.5 things move 2 and 1 steps on alternate frames; this draws them halfway between, so nothing looks doubled. Hitboxes unchanged." },
